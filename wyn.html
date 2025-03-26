@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>银行劫案互动游戏 - 终极完整版</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            background: url('https://images.unsplash.com/photo-1600891964599-f61ba0e24092') fixed;
+            background-size: cover;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::after {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 0;
+        }
+
+        .game-container {
+            width: 800px;
+            background: rgba(25, 25, 25, 0.95);
+            border-radius: 16px;
+            padding: 32px;
+            color: #f0f0f0;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 1;
+        }
+
+        .dialogue-box {
+            min-height: 240px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            line-height: 1.6;
+            font-size: 18px;
+            overflow-y: auto;
+        }
+
+        .options-container {
+            display: grid;
+            gap: 16px;
+        }
+
+        button {
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            text-align: left;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .ending {
+            color: #ffd700;
+            font-size: 1.4em;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            border-left: 4px solid #ffd700;
+            margin: 20px 0;
+            animation: fadeIn 0.6s ease;
+        }
+
+        .restart {
+            background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%) !important;
+            margin-top: 24px;
+            font-weight: bold;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="dialogue-box" id="dialogue"></div>
+        <div class="options-container" id="options"></div>
+    </div>
+
+    <script>
+        const story = {
+            "start": {
+                "text": "周五下午三点，你正在柜台核对账目。突然，三个蒙面持枪者冲入银行大厅，为首的用枪指着你大喊：'所有人趴下！把钱装进这个袋子！'",
+                "options": [
+                    {"text": "尝试谈判拖延时间", "goto": "negotiate"},
+                    {"text": "悄悄按下警报按钮", "goto": "alarm"},
+                    {"text": "配合劫匪装钱", "goto": "comply"}
+                ]
+            },
+            "negotiate": {
+                "text": "你举起双手：'冷静！现金都在保险库，需要双重验证才能打开。我们可以配合，但需要时间...'",
+                "options": [
+                    {"text": "提议分批取款", "goto": "stall"},
+                    {"text": "暗示有跟踪钞票", "goto": "tracker"},
+                    {"text": "询问劫匪需求", "goto": "demand"}
+                ]
+            },
+            "alarm": {
+                "text": "你的手指悄悄移向桌下的无声警报...但劫匪突然转身：'你在搞什么鬼？！'",
+                "options": [
+                    {"text": "假装整理文件", "goto": "cover"},
+                    {"text": "举起双手投降", "goto": "surrender"}
+                ]
+            },
+            "comply": {
+                "text": "你颤抖着将柜台现金装入袋中，注意到劫匪头目的手套有个破洞...",
+                "options": [
+                    {"text": "记住特征", "goto": "remember"},
+                    {"text": "趁机留下指纹", "goto": "fingerprint"}
+                ]
+            },
+            "stall": {
+                "text": "你提议分三次取款争取时间，劫匪头目看了眼手表：'给你10分钟，别耍花样！'",
+                "options": [
+                    {"text": "故意输错密码", "goto": "wrong_pass"},
+                    {"text": "联系主管授权", "goto": "call_manager"}
+                ]
+            },
+            "cover": {
+                "text": "你快速整理着文件：'这些都是客户资料，马上就好...'劫匪将信将疑地盯着你",
+                "options": [
+                    {"text": "继续伪装忙碌", "goto": "keep_acting"},
+                    {"text": "趁机发送求救信号", "goto": "distress"}
+                ]
+            },
+            "tracker": {
+                "text": "'这些钞票都有追踪芯片！'劫匪头目冷笑一声：'你以为我们没准备？'突然传来消音枪声...",
+                "options": [
+                    {"text": "[继续]", "goto": "death1"}
+                ]
+            },
+            "death1": {
+                "text": "<div class='ending'>【悲剧结局】你的提醒反而激怒劫匪，人质中枪身亡...</div>",
+                "options": []
+            },
+            "demand": {
+                "text": "劫匪用枪托砸碎柜台玻璃：'少废话！我们要金库的欧元现钞！'",
+                "options": [
+                    {"text": "带往金库", "goto": "vault"},
+                    {"text": "谎称需要授权", "goto": "authorize"}
+                ]
+            },
+            "vault": {
+                "text": "打开金库瞬间，你突然撞响防火警报！",
+                "options": [
+                    {"text": "[查看结果]", "goto": "alert_end"}
+                ]
+            },
+            "alert_end": {
+                "text": "<div class='ending'>【成功结局】警方及时赶到，劫匪被一网打尽！你成为英雄</div>",
+                "options": []
+            },
+            "authorize": {
+                "text": "劫匪察觉你的拖延：'别耍花样！'将你扣为人质",
+                "options": [
+                    {"text": "尝试反击", "goto": "fight"},
+                    {"text": "继续配合", "goto": "hostage"}
+                ]
+            },
+            "fight": {
+                "text": "<div class='ending'>【牺牲结局】你英勇反抗但寡不敌众，警方赶到时已重伤昏迷...</div>",
+                "options": []
+            },
+            "hostage": {
+                "text": "<div class='ending'>【人质结局】被劫持48小时后获救，但留下严重心理创伤</div>",
+                "options": []
+            },
+            "remember": {
+                "text": "你牢牢记住了劫匪手腕处的蜘蛛纹身",
+                "options": [
+                    {"text": "[继续]", "goto": "clue_end"}
+                ]
+            },
+            "clue_end": {
+                "text": "<div class='ending'>【关键证人】你的线索帮助警方一周后成功破案</div>",
+                "options": []
+            },
+            "fingerprint": {
+                "text": "你在钞票边缘留下自己的指纹标记",
+                "options": [
+                    {"text": "[继续]", "goto": "track_end"}
+                ]
+            },
+            "track_end": {
+                "text": "<div class='ending'>【追踪成功】三天后通过ATM机定位抓获全部劫匪</div>",
+                "options": []
+            },
+            "surrender": {
+                "text": "<div class='ending'>【被捕结局】劫匪用你的指纹通过安防系统，事后被追责</div>",
+                "options": []
+            },
+            "wrong_pass": {
+                "text": "<div class='ending'>【系统锁定】连续输错密码触发安防系统，劫匪慌乱中挟持人质逃离</div>",
+                "options": []
+            },
+            "call_manager": {
+                "text": "你拿起内部电话，劫匪突然抢过听筒：'想报警？' 随即扣动扳机...",
+                "options": [
+                    {"text": "[继续]", "goto": "death2"}
+                ]
+            },
+            "death2": {
+                "text": "<div class='ending'>【致命失误】你的举动被误认为反抗，导致人员伤亡</div>",
+                "options": []
+            },
+            "keep_acting": {
+                "text": "<div class='ending'>【时间竞赛】成功拖延到警方到达，但被流弹击伤住院</div>",
+                "options": []
+            },
+            "distress": {
+                "text": "你在键盘上敲击SOS代码，劫匪突然抓住你的手腕：'这是什么？！'",
+                "options": [
+                    {"text": "[继续]", "goto": "death3"}
+                ]
+            },
+            "death3": {
+                "text": "<div class='ending'>【行动败露】你的求救行为引发劫匪暴力响应</div>",
+                "options": []
+            }
+        };
+
+        let currentNode = "start";
+
+        function updateScene() {
+            const scene = story[currentNode];
+            document.getElementById("dialogue").innerHTML = scene.text;
+            
+            const optionsContainer = document.getElementById("options");
+            optionsContainer.innerHTML = "";
+            
+            scene.options.forEach(option => {
+                const button = document.createElement("button");
+                button.textContent = option.text;
+                button.onclick = () => {
+                    currentNode = option.goto;
+                    updateScene();
+                };
+                optionsContainer.appendChild(button);
+            });
+
+            if(scene.options.length === 0) {
+                const restartBtn = document.createElement("button");
+                restartBtn.textContent = "重新开始";
+                restartBtn.className = "restart";
+                restartBtn.onclick = () => {
+                    currentNode = "start";
+                    updateScene();
+                };
+                optionsContainer.appendChild(restartBtn);
+            }
+        }
+
+        window.onload = updateScene;
+    </script>
+</body>
+</html>
